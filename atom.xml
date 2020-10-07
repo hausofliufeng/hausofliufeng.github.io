@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://hausofliufeng.github.io/"/>
-  <updated>2020-03-18T11:16:46.577Z</updated>
+  <updated>2020-10-07T16:28:11.435Z</updated>
   <id>https://hausofliufeng.github.io/</id>
   
   <author>
@@ -15,6 +15,28 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>TCP中的Seq和Ack理解--以一次完整连接为例</title>
+    <link href="https://hausofliufeng.github.io/2020/TCP%E4%B8%AD%E7%9A%84Seq%E5%92%8CAck%E7%90%86%E8%A7%A3-%E4%BB%A5%E4%B8%80%E6%AC%A1%E5%AE%8C%E6%95%B4%E8%BF%9E%E6%8E%A5%E4%B8%BA%E4%BE%8B.html"/>
+    <id>https://hausofliufeng.github.io/2020/TCP%E4%B8%AD%E7%9A%84Seq%E5%92%8CAck%E7%90%86%E8%A7%A3-%E4%BB%A5%E4%B8%80%E6%AC%A1%E5%AE%8C%E6%95%B4%E8%BF%9E%E6%8E%A5%E4%B8%BA%E4%BE%8B.html</id>
+    <published>2020-10-07T16:22:46.000Z</published>
+    <updated>2020-10-07T16:28:11.435Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="关于Seq和Ack的理解"><a href="#关于Seq和Ack的理解" class="headerlink" title="关于Seq和Ack的理解"></a>关于Seq和Ack的理解</h1><p>一次TCP连接中的所有有效数据都会被标号， SYN报文和FIN报文也占用一个Seq号。一个TCP报文中有效数据的第一个字节的编号就是Seq号；一端使用Ack=x，表示该端已经收到来自对方所有字节号&lt;x的数据，所以有种说法是<em>“Ack号是发送方期待下一次接收到的有效数据的第一个字节编号，也即Seq号”</em></p><p>Seq号永远有效，Ack只有在ACK位置1时才有效。当且仅当在一次TCP连接中的第一个报文中，TCP头部才会出现ACK未被置1的情况。在剩余所有情况，ACK位均被置1。</p><h1 id="实例分析"><a href="#实例分析" class="headerlink" title="实例分析"></a>实例分析</h1><img src="/images/tcp_sample.PNG" width = "550" div align=center /><p>#1</p><p>TCP连接开始时，双方均有相对Seq=0，代表有效数据从编号0开始。第一个包中ACK位未被置1，所以对于客户端来说Ack编号无效（也可以认为就是0，因为没有接收到来自服务器的数据）。</p><p>#2</p><p>服务器收到客户端的SYN报文，自己也发送一个SYN报文，Seq=0代表服务器端的有效数据编号从0开始，Ack=1表示自己已经收到来自客户端的编号&lt;1的数据，也就是说期望客户端下此的有效数据编号（即Seq号）从1开始。</p><p>#3</p><p>客户端收到SYN报文，发出ACK报文做回应。该报文Seq=1暗示有效数据编号从1开始，Ack=1暗示自己已经收到来自服务器的编号&lt;1的数据。</p><p>#4</p><p>客户端做出http请求，注意该请求有效数据长度len=125，该报文Seq=1暗示有效数据编号从1开始，Ack不变是因为还没有接收到服务器发送的数据。</p><p>注：为什么#3中先服务器发送了ACK报文，但是#4中Seq却不+1？是因为单独的ACK报文不含有效数据，而SYN和FIN报文却算作有效数据。</p><p>#5</p><p>服务器回应ACK代表收到http请求，Seq=1是因为目前仍未发送额外的有效数据，Ack=1（第二步）+125（第四步len长度）=126代表服务器确认自己收到了来自客户端的编号&lt;126的数据。</p><p>#6</p><p>服务器回应http请求，有效数据从Seq=1开始，长度len=226，Ack不变是因为从客户端接收到的有效数据没有增加。</p><p>#7 第一次挥手</p><p>服务端请求关闭连接，Seq=1（第六步）+226（第六步len长度）=227，Ack不变。</p><p>#8 第二次挥手</p><p>客户端回应ACK报文代表收到，Seq=1（第四步）+125（第四步）=126，Ack=1（第四步）+226（第六步有效数据长度）+1（第七步FIN报文）=228</p><p>注：也可以说228=227（第七步）+1（第七步FIN报文），但从第四步累加到第八步更有助于理解细节，两种做法完全等效。</p><p>#9 第三次挥手</p><p>客户端也发出FIN报文请求关闭连接，Seq仍不变（因为上一步的Ack不算有效数据），Ack也不变。</p><p>#10 第四次挥手</p><p>服务器收到FIN报文，做出ACK回应，Seq=Seq（第七步）+1（第七步FIN报文长度）=228，Ack=Ack（第七步）+1（第九步FIN报文长度）=127。至此双方均断开TCP连接。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h1 id=&quot;关于Seq和Ack的理解&quot;&gt;&lt;a href=&quot;#关于Seq和Ack的理解&quot; class=&quot;headerlink&quot; title=&quot;关于Seq和Ack的理解&quot;&gt;&lt;/a&gt;关于Seq和Ack的理解&lt;/h1&gt;&lt;p&gt;一次TCP连接中的所有有效数据都会被标号， SYN报文和FI
+      
+    
+    </summary>
+    
+    
+    
+  </entry>
   
   <entry>
     <title>路由器中继模式下设置v2ray</title>

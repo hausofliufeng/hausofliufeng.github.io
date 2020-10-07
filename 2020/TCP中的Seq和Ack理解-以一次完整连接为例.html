@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+
+    
+
+    
+
+
+
+
+    <meta name="google-site-verification" content="mHYMjzDtBDTa4Hg_Z030QCownP3e3jkmepI_p8V5KMY" />
+
+    <meta charset="utf-8">
+    
+    
+    
+    
+    <title>TCP中的Seq和Ack理解--以一次完整连接为例 | Haus of LiuFeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+    <meta name="theme-color" content="#3F51B5">
+    
+    
+    <meta name="keywords" content="">
+    <meta name="description" content="关于Seq和Ack的理解一次TCP连接中的所有有效数据都会被标号， SYN报文和FIN报文也占用一个Seq号。一个TCP报文中有效数据的第一个字节的编号就是Seq号；一端使用Ack&#x3D;x，表示该端已经收到来自对方所有字节号&lt;x的数据，所以有种说法是“Ack号是发送方期待下一次接收到的有效数据的第一个字节编号，也即Seq号” Seq号永远有效，Ack只有在ACK位置1时才有效。当且仅当在一次TC">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TCP中的Seq和Ack理解--以一次完整连接为例">
+<meta property="og:url" content="https://hausofliufeng.github.io/2020/TCP%E4%B8%AD%E7%9A%84Seq%E5%92%8CAck%E7%90%86%E8%A7%A3-%E4%BB%A5%E4%B8%80%E6%AC%A1%E5%AE%8C%E6%95%B4%E8%BF%9E%E6%8E%A5%E4%B8%BA%E4%BE%8B.html">
+<meta property="og:site_name" content="Haus of LiuFeng">
+<meta property="og:description" content="关于Seq和Ack的理解一次TCP连接中的所有有效数据都会被标号， SYN报文和FIN报文也占用一个Seq号。一个TCP报文中有效数据的第一个字节的编号就是Seq号；一端使用Ack&#x3D;x，表示该端已经收到来自对方所有字节号&lt;x的数据，所以有种说法是“Ack号是发送方期待下一次接收到的有效数据的第一个字节编号，也即Seq号” Seq号永远有效，Ack只有在ACK位置1时才有效。当且仅当在一次TC">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://hausofliufeng.github.io/images/tcp_sample.PNG">
+<meta property="article:published_time" content="2020-10-07T16:22:46.000Z">
+<meta property="article:modified_time" content="2020-10-07T16:28:11.435Z">
+<meta property="article:author" content="Liu Feng">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://hausofliufeng.github.io/images/tcp_sample.PNG">
+    
+        <link rel="alternate" type="application/atom+xml" title="Haus of LiuFeng" href="/atom.xml">
+    
+    <link rel="shortcut icon" href="/">
+    <link rel="stylesheet" href="//unpkg.com/hexo-theme-material-indigo@latest/css/style.css">
+    <script>window.lazyScripts=[]</script>
+
+    <!-- custom head -->
+    
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="loading" class="active"></div>
+
+    <aside id="menu"  >
+  <div class="inner flex-row-vertical">
+    <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="menu-off">
+        <i class="icon icon-lg icon-close"></i>
+    </a>
+    <div class="brand-wrap" style="background-image:url(/img/brand.jpg)">
+      <div class="brand">
+        <a href="/" class="avatar waves-effect waves-circle waves-light">
+          <img src="/img/avatar.jpg">
+        </a>
+        <hgroup class="introduce">
+          <h5 class="nickname">Liu Feng</h5>
+          <a href="mailto:liufeng2900@gmail.com" title="liufeng2900@gmail.com" class="mail">liufeng2900@gmail.com</a>
+        </hgroup>
+      </div>
+    </div>
+    <div class="scroll-wrap flex-col">
+      <ul class="nav">
+        
+            <li class="waves-block waves-effect">
+              <a href="/"  >
+                <i class="icon icon-lg icon-home"></i>
+                Home
+              </a>
+            </li>
+        
+            <li class="waves-block waves-effect">
+              <a href="/archives"  >
+                <i class="icon icon-lg icon-archives"></i>
+                Archives
+              </a>
+            </li>
+        
+      </ul>
+    </div>
+  </div>
+</aside>
+
+    <main id="main">
+        <header class="top-header" id="header">
+    <div class="flex-row">
+        <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light on" id="menu-toggle">
+          <i class="icon icon-lg icon-navicon"></i>
+        </a>
+        <div class="flex-col header-title ellipsis">TCP中的Seq和Ack理解--以一次完整连接为例</div>
+        
+        <div class="search-wrap" id="search-wrap">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="back">
+                <i class="icon icon-lg icon-chevron-left"></i>
+            </a>
+            <input type="text" id="key" class="search-input" autocomplete="off" placeholder="Search">
+            <a href="javascript:;" class="header-icon waves-effect waves-circle waves-light" id="search">
+                <i class="icon icon-lg icon-search"></i>
+            </a>
+        </div>
+        
+        
+    </div>
+</header>
+<header class="content-header post-header">
+
+    <div class="container fade-scale">
+        <h1 class="title">TCP中的Seq和Ack理解--以一次完整连接为例</h1>
+        <h5 class="subtitle">
+            
+                <time datetime="2020-10-07T16:22:46.000Z" itemprop="datePublished" class="page-time">
+  2020-10-08
+</time>
+
+
+            
+        </h5>
+    </div>
+
+    
+
+
+</header>
+
+
+<div class="container body-wrap">
+    
+    <aside class="post-widget">
+        <nav class="post-toc-wrap post-toc-shrink" id="post-toc">
+            <h4>TOC</h4>
+            <ol class="post-toc"><li class="post-toc-item post-toc-level-1"><a class="post-toc-link" href="#关于Seq和Ack的理解"><span class="post-toc-number">1.</span> <span class="post-toc-text">关于Seq和Ack的理解</span></a></li><li class="post-toc-item post-toc-level-1"><a class="post-toc-link" href="#实例分析"><span class="post-toc-number">2.</span> <span class="post-toc-text">实例分析</span></a></li></ol>
+        </nav>
+    </aside>
+
+
+<article id="post-TCP中的Seq和Ack理解-以一次完整连接为例"
+  class="post-article article-type-post fade" itemprop="blogPost">
+
+    <div class="post-card">
+        <h1 class="post-card-title">TCP中的Seq和Ack理解--以一次完整连接为例</h1>
+        <div class="post-meta">
+            <time class="post-time" title="2020-10-08 00:22:46" datetime="2020-10-07T16:22:46.000Z"  itemprop="datePublished">2020-10-08</time>
+
+            
+
+
+            
+<span id="busuanzi_container_page_pv" title="文章总阅读量" style='display:none'>
+    <i class="icon icon-eye icon-pr"></i><span id="busuanzi_value_page_pv"></span>
+</span>
+
+
+        </div>
+        <div class="post-content" id="post-content" itemprop="postContent">
+            <h1 id="关于Seq和Ack的理解"><a href="#关于Seq和Ack的理解" class="headerlink" title="关于Seq和Ack的理解"></a>关于Seq和Ack的理解</h1><p>一次TCP连接中的所有有效数据都会被标号， SYN报文和FIN报文也占用一个Seq号。一个TCP报文中有效数据的第一个字节的编号就是Seq号；一端使用Ack=x，表示该端已经收到来自对方所有字节号&lt;x的数据，所以有种说法是<em>“Ack号是发送方期待下一次接收到的有效数据的第一个字节编号，也即Seq号”</em></p>
+<p>Seq号永远有效，Ack只有在ACK位置1时才有效。当且仅当在一次TCP连接中的第一个报文中，TCP头部才会出现ACK未被置1的情况。在剩余所有情况，ACK位均被置1。</p>
+<h1 id="实例分析"><a href="#实例分析" class="headerlink" title="实例分析"></a>实例分析</h1><img src="/images/tcp_sample.PNG" width = "550" div align=center />
+
+<p>#1</p>
+<p>TCP连接开始时，双方均有相对Seq=0，代表有效数据从编号0开始。第一个包中ACK位未被置1，所以对于客户端来说Ack编号无效（也可以认为就是0，因为没有接收到来自服务器的数据）。</p>
+<p>#2</p>
+<p>服务器收到客户端的SYN报文，自己也发送一个SYN报文，Seq=0代表服务器端的有效数据编号从0开始，Ack=1表示自己已经收到来自客户端的编号&lt;1的数据，也就是说期望客户端下此的有效数据编号（即Seq号）从1开始。</p>
+<p>#3</p>
+<p>客户端收到SYN报文，发出ACK报文做回应。该报文Seq=1暗示有效数据编号从1开始，Ack=1暗示自己已经收到来自服务器的编号&lt;1的数据。</p>
+<p>#4</p>
+<p>客户端做出http请求，注意该请求有效数据长度len=125，该报文Seq=1暗示有效数据编号从1开始，Ack不变是因为还没有接收到服务器发送的数据。</p>
+<p>注：为什么#3中先服务器发送了ACK报文，但是#4中Seq却不+1？是因为单独的ACK报文不含有效数据，而SYN和FIN报文却算作有效数据。</p>
+<p>#5</p>
+<p>服务器回应ACK代表收到http请求，Seq=1是因为目前仍未发送额外的有效数据，Ack=1（第二步）+125（第四步len长度）=126代表服务器确认自己收到了来自客户端的编号&lt;126的数据。</p>
+<p>#6</p>
+<p>服务器回应http请求，有效数据从Seq=1开始，长度len=226，Ack不变是因为从客户端接收到的有效数据没有增加。</p>
+<p>#7 第一次挥手</p>
+<p>服务端请求关闭连接，Seq=1（第六步）+226（第六步len长度）=227，Ack不变。</p>
+<p>#8 第二次挥手</p>
+<p>客户端回应ACK报文代表收到，Seq=1（第四步）+125（第四步）=126，Ack=1（第四步）+226（第六步有效数据长度）+1（第七步FIN报文）=228</p>
+<p>注：也可以说228=227（第七步）+1（第七步FIN报文），但从第四步累加到第八步更有助于理解细节，两种做法完全等效。</p>
+<p>#9 第三次挥手</p>
+<p>客户端也发出FIN报文请求关闭连接，Seq仍不变（因为上一步的Ack不算有效数据），Ack也不变。</p>
+<p>#10 第四次挥手</p>
+<p>服务器收到FIN报文，做出ACK回应，Seq=Seq（第七步）+1（第七步FIN报文长度）=228，Ack=Ack（第七步）+1（第九步FIN报文长度）=127。至此双方均断开TCP连接。</p>
+
+        </div>
+
+        <blockquote class="post-copyright">
+    
+    <div class="content">
+        
+<span class="post-time">
+    Last updated: <time datetime="2020-10-07T16:28:11.435Z" itemprop="dateUpdated">2020-10-08 00:28:11</time>
+</span><br>
+
+
+        
+    </div>
+    
+    <footer>
+        <a href="https://hausofliufeng.github.io">
+            <img src="/img/avatar.jpg" alt="Liu Feng">
+            Liu Feng
+        </a>
+    </footer>
+</blockquote>
+
+        
+
+
+        <div class="post-footer">
+            
+
+            
+
+
+        </div>
+    </div>
+
+    
+<nav class="post-nav flex-row flex-justify-between flex-row-reverse">
+  
+
+  
+    <div class="waves-block waves-effect next">
+      <a href="/2020/%E8%B7%AF%E7%94%B1%E5%99%A8%E4%B8%AD%E7%BB%A7%E6%A8%A1%E5%BC%8F%E4%B8%8B%E8%AE%BE%E7%BD%AEv2ray.html" id="post-next" class="post-nav-link">
+        <div class="tips">Next <i class="icon icon-angle-right icon-lg icon-pl"></i></div>
+        <h4 class="title">路由器中继模式下设置v2ray</h4>
+      </a>
+    </div>
+  
+</nav>
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    <!-- Valine Comments -->
+    <div class="comments vcomment" id="comments"></div>
+    <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+    <script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script>
+    <!-- Valine Comments script -->
+    <script>
+        var GUEST_INFO = ['nick','mail','link'];
+        var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+          return GUEST_INFO.indexOf(item) > -1
+        });
+        new Valine({
+            el: '#comments',
+            notify: 'false' == 'true',
+            verify: 'false' == 'true',
+            appId: "0SgR8LfujX8BlEP23DDUfplu-gzGzoHsz",
+            appKey: "PUwkBzqiLNSTQEyAr6uN09f2",
+            avatar: "mm",
+            placeholder: "Just go go",
+            guest_info: guest_info.length == 0 ? GUEST_INFO : guest_info,
+            pageSize: "10"
+        })
+    </script>
+    <!-- Valine Comments end -->
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+</div>
+
+        <footer class="footer">
+    <div class="top">
+        
+<p>
+    <span id="busuanzi_container_site_uv" style='display:none'>
+        访客数：<span id="busuanzi_value_site_uv"></span>
+    </span>
+    <span id="busuanzi_container_site_pv" style='display:none'>
+        访问量：<span id="busuanzi_value_site_pv"></span>
+    </span>
+</p>
+
+
+        <p>
+            
+                <span><a href="/atom.xml" target="_blank" class="rss" title="rss"><i class="icon icon-lg icon-rss"></i></a></span>
+            
+            <span>This blog is licensed under a <a rel="license noopener" href="https://creativecommons.org/licenses/by/4.0/" target="_blank">Creative Commons Attribution 4.0 International License</a>.</span>
+        </p>
+    </div>
+    <div class="bottom">
+        <p><span>Liu Feng &copy; 2020</span>
+            <span>
+                
+                Power by <a href="http://hexo.io/" target="_blank">Hexo</a> Theme <a href="https://github.com/yscoder/hexo-theme-indigo" target="_blank">indigo</a>
+            </span>
+        </p>
+    </div>
+</footer>
+
+    </main>
+    <div class="mask" id="mask"></div>
+<a href="javascript:;" id="gotop" class="waves-effect waves-circle waves-light"><span class="icon icon-lg icon-chevron-up"></span></a>
+
+
+    <script src="//cdn.bootcss.com/node-waves/0.7.4/waves.min.js"></script>
+<script>
+var BLOG = { ROOT: '/', SHARE: false, REWARD: false };
+
+
+</script>
+
+<script src="//unpkg.com/hexo-theme-material-indigo@latest/js/main.min.js"></script>
+
+
+<div class="search-panel" id="search-panel">
+    <ul class="search-result" id="search-result"></ul>
+</div>
+<template id="search-tpl">
+<li class="item">
+    <a href="{path}" class="waves-block waves-effect">
+        <div class="title ellipsis" title="{title}">{title}</div>
+        <div class="flex-row flex-middle">
+            <div class="tags ellipsis">
+                {tags}
+            </div>
+            <time class="flex-col time">{date}</time>
+        </div>
+    </a>
+</li>
+</template>
+
+<script src="//unpkg.com/hexo-theme-material-indigo@latest/js/search.min.js" async></script>
+
+
+
+
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+
+</body>
+</html>
